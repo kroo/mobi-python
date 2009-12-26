@@ -1,0 +1,15 @@
+Mobi Python Library
+===================
+
+This library provides a little API for accessing the contents of an unencrypted .mobi file.  Here's a short example:
+
+    from mobi import Mobi
+
+    book = Mobi("test/CharlesDarwin.mobi");
+    book.parse();
+
+    # this will print, 1 record at a time, the entire contents of the book
+    for record in book:
+      print record,
+
+**This should be considered alpha quality software.  It still has some errors in the decoding of compressed ebooks.**
