@@ -20,20 +20,21 @@ class Mobi:
     """ reads in the file, then parses record tables"""
     self.contents = self.f.read();
     self.header = self.parseHeader();
-    # pprint (["header:", self.header])
     self.records = self.parseRecordInfoList();
     self.readRecord0()
 
-  def readRecord(self, recordnum):
+  def readRecord(self, recordnum, disable_compression=False):
     if self.config:
-      if self.config['palmdoc']['Compression'] == 2:
-        result = uncompress_lz77(self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum]['record Data Offset'] + self.config['palmdoc']['record size']])
-        if not result: # try adding another record
-          result = uncompress_lz77(self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum]['record Data Offset'] + self.config['palmdoc']['record size'] + 1])
+      if self.config['palmdoc']['Compression'] == 1 or disable_compression:
+        return self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum+1]['record Data Offset']];
+      elif self.config['palmdoc']['Compression'] == 2:
+        result = uncompress_lz77(self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum+1]['record Data Offset']-self.config['mobi']['extra bytes']])
         return result
-      elif self.config['palmdoc']['Compression'] == 1:
-        return self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum]['record Data Offset'] + self.config['palmdoc']['record size']];
 
+  def readImageRecord(self, imgnum):
+    if self.config:
+      recordnum = self.config['mobi']['First Image index'] + imgnum;
+      return self.readRecord(recordnum, disable_compression=True);
 
 ###########  Private API ###########################
 
@@ -116,15 +117,12 @@ class Mobi:
     exthHeader = None
     if MobiHeader['Has EXTH Header']:
       exthHeader = self.parseEXTHHeader();
-      # pprint (["exthHeader: ", exthHeader]);
 
     self.config = {
       'palmdoc': palmdocHeader,
       'mobi' : MobiHeader,
       'exth' : exthHeader
     }
-
-    # pprint(["config:", self.config]);
 
   def parseEXTHHeader(self):
     headerfmt = '>III'
@@ -153,7 +151,7 @@ class Mobi:
     return resultsDict;
 
   def parseMobiHeader(self):
-    headerfmt = '>IIIIII40sIIIIIIII16sI36sIIII'
+    headerfmt = '> IIII II 40s III IIIII IIII I 36s IIII 8s HHIIIII'
     headerlen = calcsize(headerfmt)
 
     fields = [
@@ -161,24 +159,45 @@ class Mobi:
       "header length",
       "Mobi type",
       "text Encoding",
+
       "Unique-ID",
       "Generator version",
+
       "-Reserved",
+
       "First Non-book index",
       "Full Name Offset",
       "Full Name Length",
+
       "Language",
       "Input Language",
       "Output Language",
       "Format version",
       "First Image index",
-      "-sixteen bytes, often zeros",
+
+      "First Huff Record",
+      "Huff Record Count",
+      "First DATP Record",
+      "DATP Record Count",
+
       "EXTH flags",
-      "-32 unknown bytes, if Mobi is long enough",
+
+      "-36 unknown bytes, if Mobi is long enough",
+
       "DRM Offset",
       "DRM Count",
       "DRM Size",
-      "DRM Flags"
+      "DRM Flags",
+
+      "-Usually Zeros, unknown 8 bytes",
+
+      "-Unknown",
+      "Last Image Record",
+      "-Unknown",
+      "FCIS record",
+      "-Unknown",
+      "FLIS record",
+      "Unknown"
     ]
 
     # unpack header, zip up into list of tuples
@@ -198,6 +217,11 @@ class Mobi:
     resultsDict['Has EXTH Header'] = (resultsDict['EXTH flags'] & 0x40) != 0;
 
     self.offset += resultsDict['header length'];
+
+    def onebits(x, width=16):
+        return len(filter(lambda x: x == "1", (str((x>>i)&1) for i in xrange(width-1,-1,-1))));
+
+    resultsDict['extra bytes'] = 2*onebits(unpack(">H", self.contents[self.offset-2:self.offset])[0] & 0xFFFE)
 
     return resultsDict;
 
@@ -223,19 +247,9 @@ class Mobi:
     self.offset = offset+headerlen;
     return resultsDict
 
-  def readRecord(self, recordnum):
-    if self.config:
-      if self.config['palmdoc']['Compression'] == 2:
-        result = uncompress_lz77(self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum]['record Data Offset'] + self.config['palmdoc']['record size']])
-        if not result: # try adding another record
-          result = uncompress_lz77(self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum]['record Data Offset'] + self.config['palmdoc']['record size'] + 1])
-        return result
-      elif self.config['palmdoc']['Compression'] == 1:
-        return self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum]['record Data Offset'] + self.config['palmdoc']['record size']];
-
 class MobiTests(unittest.TestCase):
   def setUp(self):
-    self.mobitest = Mobi("../test/CharlesDarwin.mobi");
+    self.mobitest = Mobi("../test/Life_History_of_the_Kangaroo_Rat_by_Taylor.mobi");
   def testParse(self):
     self.mobitest.parse();
     pprint (self.mobitest.config)
@@ -244,6 +258,13 @@ class MobiTests(unittest.TestCase):
     content = ""
     for i in range(1,5):
       content += self.mobitest.readRecord(i);
+  def testImage(self):
+    self.mobitest.parse();
+    pprint (self.mobitest.records);
+    for record in range(10):
+      f = open("imagerecord%d.jpg" % record, 'w')
+      f.write(self.mobitest.readImageRecord(record));
+      f.close();
 
 if __name__ == '__main__':
   unittest.main()

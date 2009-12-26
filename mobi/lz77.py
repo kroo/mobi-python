@@ -48,8 +48,8 @@ def uncompress_lz77(data):
 
       offset += 1;
       if (offset > len(data)):
-        # print("WARNING: offset to LZ77 bits is outside of the data: %d" % offset);
-        return;
+        print("WARNING: offset to LZ77 bits is outside of the data: %d" % offset);
+        return text;
 
       lz77, = struct.unpack('>H', data[offset-2:offset])
 
@@ -63,7 +63,7 @@ def uncompress_lz77(data):
       lz77offset = lz77 >> 3;
       if (lz77offset < 1):
         print("WARNING: LZ77 decompression offset is invalid!");
-        return;
+        return text;
 
       # Getting text from the offset is a little tricky, because
       # in theory you can be referring to characters you haven't

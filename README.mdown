@@ -1,6 +1,6 @@
 Mobi Python Library
 ===================
-**This should be considered alpha quality software.  It still has some errors in the decoding of compressed ebooks.**
+**This should be considered alpha quality software.**
 
 This library provides a little API for accessing the contents of an unencrypted .mobi file.  Here's a short example:
 

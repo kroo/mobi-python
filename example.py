@@ -4,4 +4,7 @@ book = Mobi("test/CharlesDarwin.mobi");
 book.parse();
 
 for record in book:
-  print record;
+  print record,
+
+import pprint
+pprint.pprint(book.config)
