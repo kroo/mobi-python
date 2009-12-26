@@ -3,7 +3,6 @@ Mobi Python Library
 
 This library provides a little API for accessing the contents of an unencrypted .mobi file.  Here's a short example:
 
-    #!python
     from mobi import Mobi
 
     book = Mobi("test/CharlesDarwin.mobi");
