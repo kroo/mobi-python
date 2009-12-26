@@ -16,7 +16,6 @@ This library provides a little API for accessing the contents of an unencrypted 
 This library provides quite a lot of access to the metadata included in any mobibook.  For example, Gutenburg's Origin of the Species:
 
     >>> pprint(book.config)
-    >>> pprint.pprint(book.config)
     {'exth': {'header length': 356,
               'identifier': 1163416648,
               'record Count': 15,
