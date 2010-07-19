@@ -269,7 +269,7 @@ class MobiTests(unittest.TestCase):
   def testImage(self):
     self.mobitest.parse();
     pprint (self.mobitest.records);
-    for record in range(10):
+    for record in range(4):
       f = open("imagerecord%d.jpg" % record, 'w')
       f.write(self.mobitest.readImageRecord(record));
       f.close();
