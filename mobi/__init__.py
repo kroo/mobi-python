@@ -273,6 +273,11 @@ class MobiTests(unittest.TestCase):
       f = open("imagerecord%d.jpg" % record, 'w')
       f.write(self.mobitest.readImageRecord(record));
       f.close();
+  def testAuthorTitle(self):
+    self.mobitest.parse()
+    self.assertEqual(self.mobitest.author(), 'Charles Darwin')
+    self.assertEqual(self.mobitest.title(), 'The Origin of Species by means '+
+        'of Natural Selection, 6th Edition')
 
 if __name__ == '__main__':
   unittest.main()
