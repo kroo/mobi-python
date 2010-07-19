@@ -257,7 +257,7 @@ class Mobi:
 
 class MobiTests(unittest.TestCase):
   def setUp(self):
-    self.mobitest = Mobi("../test/Life_History_of_the_Kangaroo_Rat_by_Taylor.mobi");
+    self.mobitest = Mobi("../test/CharlesDarwin.mobi");
   def testParse(self):
     self.mobitest.parse();
     pprint (self.mobitest.config)
