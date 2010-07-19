@@ -64,3 +64,8 @@ This library provides quite a lot of access to the metadata included in any mobi
                  'record size': 4096,
                  'text length': 1336365}}
     >>>
+
+## Retrieving Author and Title
+The author and title of a book can be retrieved using the author() and title()
+methods respectively on a Mobi() object. The parse() method needs to have
+already been called.
