@@ -36,6 +36,14 @@ class Mobi:
       recordnum = self.config['mobi']['First Image index'] + imgnum;
       return self.readRecord(recordnum, disable_compression=True);
 
+  def author(self):
+    "Returns the author of the book"
+    return self.config['exth']['records'][100]
+
+  def title(self):
+    "Returns the title of the book"
+    return self.config['mobi']['Full Name']
+
 ###########  Private API ###########################
 
   def __init__(self, filename):
