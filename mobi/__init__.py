@@ -48,7 +48,10 @@ class Mobi:
 
   def __init__(self, filename):
     try:
-      self.f = open(filename, "rb");
+      if isinstance(filename, str):
+        self.f = open(filename, "rb");
+      else:
+        self.f = filename;
     except IOError,e:
       sys.stderr.write("Could not open %s! " % filename);
       raise e;
