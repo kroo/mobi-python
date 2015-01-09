@@ -8,33 +8,49 @@ Copyright (c) 2009 Elliot Kroo. All rights reserved.
 """
 
 import sys
-import os
-import unittest
 from struct import *
-from pprint import pprint
-import utils
 from lz77 import uncompress_lz77
 
 class Mobi:
   def parse(self):
     """ reads in the file, then parses record tables"""
-    self.contents = self.f.read();
-    self.header = self.parseHeader();
-    self.records = self.parseRecordInfoList();
-    self.readRecord0()
+    self.contents = self.f.read()
+    self.header = self.parseHeader()
+    self.records = self.parseRecordInfoList()
+    self.config = self.populate_config()
 
   def readRecord(self, recordnum, disable_compression=False):
-    if self.config:
-      if self.config['palmdoc']['Compression'] == 1 or disable_compression:
-        return self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum+1]['record Data Offset']];
-      elif self.config['palmdoc']['Compression'] == 2:
-        result = uncompress_lz77(self.contents[self.records[recordnum]['record Data Offset']:self.records[recordnum+1]['record Data Offset']-self.config['mobi']['extra bytes']])
-        return result
+    compressionType = self.config['palmdoc']['Compression']
+
+    try:
+      start = self.records[recordnum]['record Data Offset']
+
+      # @TODO offset by record is not always 1
+      end = self.records[recordnum + 1]['record Data Offset']
+    except KeyError, e:
+      sys.stderr.write('Could not find key value: %s\n' % str(e))
+      return
+
+    # @TODO configuration not present should run configurator.
+    if not self.config:
+      return
+
+    if (compressionType == 1 or disable_compression):
+      return self.contents[start : end]
+
+    elif (compressionType == 2):
+      extra = self.config['mobi']['extra bytes']
+      result = uncompress_lz77(self.contents[start : end - extra])
+      return result
+    else: 
+      sys.stderr.write('Error: could not recognize compression type "%s".' \
+        % str(compressionType))
+      exit(1)
 
   def readImageRecord(self, imgnum):
     if self.config:
-      recordnum = self.config['mobi']['First Image index'] + imgnum;
-      return self.readRecord(recordnum, disable_compression=True);
+      recordnum = self.config['mobi']['First Image index'] + imgnum
+      return self.readRecord(recordnum, disable_compression=True)
 
   def author(self):
     "Returns the author of the book"
@@ -44,56 +60,61 @@ class Mobi:
     "Returns the title of the book"
     return self.config['mobi']['Full Name']
 
-###########  Private API ###########################
+###########################  Private API ###########################
 
   def __init__(self, filename):
     try:
+      # not sure if explicit type checking is the best way to do this.
       if isinstance(filename, str):
-        self.f = open(filename, "rb");
+        self.f = open(filename, "rb")
       else:
-        self.f = filename;
-    except IOError,e:
-      sys.stderr.write("Could not open %s! " % filename);
-      raise e;
-    self.offset = 0;
+        self.f = filename
+    except IOError, e:
+      sys.stderr.write("Could not open %s! " % filename)
+      raise e
+    self.offset = 0
 
   def __iter__(self):
-    if not self.config: return;
+    # @TODO configuration not present should run configurator.
+    if not self.config: 
+      return
+
     for record in range(1, self.config['mobi']['First Non-book index'] - 1):
-      yield self.readRecord(record);
+      yield self.readRecord(record)
 
   def parseRecordInfoList(self):
-    records = {};
+    records = {}
+
     # read in all records in info list
     for recordID in range(self.header['number of records']):
-      headerfmt = '>II'
-      headerlen = calcsize(headerfmt)
       fields = [
         "record Data Offset",
-        "UniqueID",
+        "UniqueID"
       ]
+
+      headerfmt = '>II'
+      headerlen = calcsize(headerfmt)
+      infolist = self.contents[self.offset : self.offset + headerlen]
+
       # create tuple with info
-      results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+      results = dict(zip(fields, unpack(headerfmt, infolist)))
 
       # increment offset into file
       self.offset += headerlen
 
-      # convert tuple to dictionary
-      resultsDict = utils.toDict(results);
+      # futz around with the unique ID record, as the uniqueID's top 8 bytes 
+      # are really the "record attributes":
+      results['record Attributes'] = \
+        (results['UniqueID'] & 0xFF000000) >> 24
 
-      # futz around with the unique ID record, as the uniqueID's top 8 bytes are
-      # really the "record attributes":
-      resultsDict['record Attributes'] = (resultsDict['UniqueID'] & 0xFF000000) >> 24;
-      resultsDict['UniqueID'] = resultsDict['UniqueID'] & 0x00FFFFFF;
+      results['UniqueID'] = results['UniqueID'] & 0x00FFFFFF
 
       # store into the records dict
-      records[resultsDict['UniqueID']] = resultsDict;
+      records[results['UniqueID']] = results
 
-    return records;
+    return records
 
   def parseHeader(self):
-    headerfmt = '>32shhIIIIII4s4sIIH'
-    headerlen = calcsize(headerfmt)
     fields = [
       "name",
       "attributes",
@@ -111,33 +132,39 @@ class Mobi:
       "number of records"
     ]
 
+    headerfmt = '>32shhIIIIII4s4sIIH'
+    headerlen = calcsize(headerfmt)
+    header = self.contents[self.offset : self.offset + headerlen]
+
     # unpack header, zip up into list of tuples
-    results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+    results = dict(zip(fields, unpack(headerfmt, header)))
 
     # increment offset into file
     self.offset += headerlen
 
-    # convert tuple array to dictionary
-    resultsDict = utils.toDict(results);
+    return results
 
-    return resultsDict
-
-  def readRecord0(self):
-    palmdocHeader = self.parsePalmDOCHeader();
-    MobiHeader = self.parseMobiHeader();
+  # this function will populate the self.config attribute
+  def populate_config(self):
+    palmdocHeader = self.parsePalmDOCHeader()
+    MobiHeader = self.parseMobiHeader()
     exthHeader = None
-    if MobiHeader['Has EXTH Header']:
-      exthHeader = self.parseEXTHHeader();
+    if (MobiHeader['Has EXTH Header']):
+      exthHeader = self.parseEXTHHeader()
 
-    self.config = {
+    config = {
       'palmdoc': palmdocHeader,
       'mobi' : MobiHeader,
       'exth' : exthHeader
     }
 
+    return config
+
   def parseEXTHHeader(self):
     headerfmt = '>III'
     headerlen = calcsize(headerfmt)
+
+    header = self.contents[self.offset:self.offset + headerlen]
 
     fields = [
       'identifier',
@@ -146,20 +173,24 @@ class Mobi:
     ]
 
     # unpack header, zip up into list of tuples
-    results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+    results = dict(zip(fields, unpack(headerfmt, header)))
 
-    # convert tuple array to dictionary
-    resultsDict = utils.toDict(results);
+    self.offset += headerlen
 
-    self.offset += headerlen;
-    resultsDict['records'] = {};
-    for record in range(resultsDict['record Count']):
-      recordType, recordLen = unpack(">II", self.contents[self.offset:self.offset+8]);
-      recordData = self.contents[self.offset+8:self.offset+recordLen];
-      resultsDict['records'][recordType] = recordData;
-      self.offset += recordLen;
+    results['records'] = {}
 
-    return resultsDict;
+    for record in range(results['record Count']):
+
+      recordType, recordLen = \
+        unpack(">II", self.contents[self.offset : self.offset + 8])
+      
+      recordData = \
+        self.contents[self.offset + 8 : self.offset+recordLen]
+
+      results['records'][recordType] = recordData
+      self.offset += recordLen
+
+    return results
 
   def parseMobiHeader(self):
     headerfmt = '> IIII II 40s III IIIII IIII I 36s IIII 8s HHIIIII'
@@ -211,34 +242,39 @@ class Mobi:
       "Unknown"
     ]
 
+    header = self.contents[self.offset:self.offset+headerlen]
+
     # unpack header, zip up into list of tuples
-    results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+    results = dict(zip(fields, unpack(headerfmt, header)))
 
-    # convert tuple array to dictionary
-    resultsDict = utils.toDict(results);
+    results['Start Offset'] = self.offset
 
-    resultsDict['Start Offset'] = self.offset;
+    results['Full Name'] = (self.contents[
+      self.records[0]['record Data Offset'] + results['Full Name Offset'] :
+      self.records[0]['record Data Offset'] + \
+        results['Full Name Offset'] + results['Full Name Length']])
 
-    resultsDict['Full Name'] = (self.contents[
-      self.records[0]['record Data Offset'] + resultsDict['Full Name Offset'] :
-      self.records[0]['record Data Offset'] + resultsDict['Full Name Offset'] + resultsDict['Full Name Length']])
+    results['Has DRM'] = results['DRM Offset'] != 0xFFFFFFFF
 
-    resultsDict['Has DRM'] = resultsDict['DRM Offset'] != 0xFFFFFFFF;
+    results['Has EXTH Header'] = (results['EXTH flags'] & 0x40) != 0
 
-    resultsDict['Has EXTH Header'] = (resultsDict['EXTH flags'] & 0x40) != 0;
-
-    self.offset += resultsDict['header length'];
+    self.offset += results['header length']
 
     def onebits(x, width=16):
-        return len(filter(lambda x: x == "1", (str((x>>i)&1) for i in xrange(width-1,-1,-1))));
+      # Remove reliance on xrange()?
+      return len(filter(lambda x: x == "1", 
+        (str((x>>i)&1) for i in xrange(width - 1, -1, -1))))
 
-    resultsDict['extra bytes'] = 2*onebits(unpack(">H", self.contents[self.offset-2:self.offset])[0] & 0xFFFE)
+    results['extra bytes'] = \
+      2 * onebits(
+        unpack(">H", self.contents[self.offset - 2 : self.offset])[0] & 0xFFFE)
 
-    return resultsDict;
+    return results
 
   def parsePalmDOCHeader(self):
     headerfmt = '>HHIHHHH'
     headerlen = calcsize(headerfmt)
+
     fields = [
       "Compression",
       "Unused",
@@ -248,39 +284,11 @@ class Mobi:
       "Encryption Type",
       "Unknown"
     ]
-    offset = self.records[0]['record Data Offset'];
-    # create tuple with info
-    results = zip(fields, unpack(headerfmt, self.contents[offset:offset+headerlen]))
 
-    # convert tuple array to dictionary
-    resultsDict = utils.toDict(results);
+    offset = self.records[0]['record Data Offset']
 
-    self.offset = offset+headerlen;
-    return resultsDict
+    header = self.contents[offset:offset+headerlen]
+    results = dict(zip(fields, unpack(headerfmt, header)))
 
-class MobiTests(unittest.TestCase):
-  def setUp(self):
-    self.mobitest = Mobi("../test/CharlesDarwin.mobi");
-  def testParse(self):
-    self.mobitest.parse();
-    pprint (self.mobitest.config)
-  def testRead(self):
-    self.mobitest.parse();
-    content = ""
-    for i in range(1,5):
-      content += self.mobitest.readRecord(i);
-  def testImage(self):
-    self.mobitest.parse();
-    pprint (self.mobitest.records);
-    for record in range(4):
-      f = open("imagerecord%d.jpg" % record, 'w')
-      f.write(self.mobitest.readImageRecord(record));
-      f.close();
-  def testAuthorTitle(self):
-    self.mobitest.parse()
-    self.assertEqual(self.mobitest.author(), 'Charles Darwin')
-    self.assertEqual(self.mobitest.title(), 'The Origin of Species by means '+
-        'of Natural Selection, 6th Edition')
-
-if __name__ == '__main__':
-  unittest.main()
+    self.offset = offset+headerlen
+    return results
