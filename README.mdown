@@ -2,6 +2,8 @@ Mobi Python Library
 ===================
 **This should be considered alpha quality software.**
 
+**Note: Current iteration of software dumps data as html _wihtout_ Unicode support. Current task is to convert Unicode characters to plain text**
+
 This library provides a little API for accessing the contents of an unencrypted .mobi file.  Here's a short example:
 
     from mobi import Mobi
