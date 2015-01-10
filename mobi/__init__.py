@@ -26,6 +26,8 @@ class Mobi:
       start = self.records[recordnum]['record Data Offset']
 
       # @TODO offset by record is not always 1
+      # the correct record offset can be determined by examining
+      # `book.records`
       end = self.records[recordnum + 1]['record Data Offset']
     except KeyError, e:
       sys.stderr.write('Could not find key value: %s\n' % str(e))
