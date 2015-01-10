@@ -1,10 +1,11 @@
 from mobi import Mobi
+from pprint import pprint
 
-book = Mobi("test/CharlesDarwin.mobi");
-book.parse();
+if __name__ == '__main__':
+  book = Mobi("test/CharlesDarwin.mobi");
+  book.parse();
 
-for record in book:
-  print record,
-
-import pprint
-pprint.pprint(book.config)
+  for record in book:
+    # this prints the entire book out to the console
+    # it can be piped to an html file
+    print record

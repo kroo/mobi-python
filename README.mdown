@@ -2,6 +2,8 @@ Mobi Python Library
 ===================
 **This should be considered alpha quality software.**
 
+**Note: Current iteration of software dumps data as html _without_ Unicode support. Current task is to convert Unicode characters to plain text**
+
 This library provides a little API for accessing the contents of an unencrypted .mobi file.  Here's a short example:
 
     from mobi import Mobi
@@ -11,7 +13,7 @@ This library provides a little API for accessing the contents of an unencrypted 
 
     # this will print, 1 record at a time, the entire contents of the book
     for record in book:
-      print record,
+      print record
 
 This library provides quite a lot of access to the metadata included in any mobibook.  For example, Gutenburg's Origin of the Species:
 
