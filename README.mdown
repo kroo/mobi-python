@@ -14,7 +14,7 @@ for record in book:
     print record
 ```
 This library provides quite a lot of access to the metadata included in any mobibook.  For example, Gutenburg's Origin of the Species:
-```json
+```python
 >>> pprint(book.config)
 {'exth': {'header length': 356,
           'identifier': 1163416648,
