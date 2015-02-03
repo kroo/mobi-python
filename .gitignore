@@ -1,1 +1,5 @@
 *.pyc
+
+# distutils
+/dist/
+*.egg-info/
