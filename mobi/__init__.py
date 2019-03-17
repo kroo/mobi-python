@@ -12,8 +12,8 @@ import os
 import unittest
 from struct import *
 from pprint import pprint
-import utils
-from lz77 import uncompress_lz77
+from . import utils
+from .lz77 import uncompress_lz77
 
 class Mobi:
   def parse(self):
@@ -52,7 +52,7 @@ class Mobi:
         self.f = open(filename, "rb");
       else:
         self.f = filename;
-    except IOError,e:
+    except IOError as e:
       sys.stderr.write("Could not open %s! " % filename);
       raise e;
     self.offset = 0;
@@ -73,7 +73,7 @@ class Mobi:
         "UniqueID",
       ]
       # create tuple with info
-      results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+      results = list(zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen])))
 
       # increment offset into file
       self.offset += headerlen
@@ -112,7 +112,7 @@ class Mobi:
     ]
 
     # unpack header, zip up into list of tuples
-    results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+    results = list(zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen])))
 
     # increment offset into file
     self.offset += headerlen
@@ -146,7 +146,7 @@ class Mobi:
     ]
 
     # unpack header, zip up into list of tuples
-    results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+    results = list(zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen])))
 
     # convert tuple array to dictionary
     resultsDict = utils.toDict(results);
@@ -212,7 +212,7 @@ class Mobi:
     ]
 
     # unpack header, zip up into list of tuples
-    results = zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen]))
+    results = list(zip(fields, unpack(headerfmt, self.contents[self.offset:self.offset+headerlen])))
 
     # convert tuple array to dictionary
     resultsDict = utils.toDict(results);
@@ -230,7 +230,7 @@ class Mobi:
     self.offset += resultsDict['header length'];
 
     def onebits(x, width=16):
-        return len(filter(lambda x: x == "1", (str((x>>i)&1) for i in xrange(width-1,-1,-1))));
+        return len([x for x in (str((x>>i)&1) for i in range(width-1,-1,-1)) if x == "1"]);
 
     resultsDict['extra bytes'] = 2*onebits(unpack(">H", self.contents[self.offset-2:self.offset])[0] & 0xFFFE)
 
@@ -250,7 +250,7 @@ class Mobi:
     ]
     offset = self.records[0]['record Data Offset'];
     # create tuple with info
-    results = zip(fields, unpack(headerfmt, self.contents[offset:offset+headerlen]))
+    results = list(zip(fields, unpack(headerfmt, self.contents[offset:offset+headerlen])))
 
     # convert tuple array to dictionary
     resultsDict = utils.toDict(results);
