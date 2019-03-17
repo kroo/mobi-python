@@ -19,7 +19,7 @@ def uncompress_lz77(data):
     # char = substr($data,$offset++,1);
     char = data[offset];
     offset += 1;
-    ord_ = ord(char);
+    ord_ = char;
 
     # print " ".join([repr(char), hex(ord_)])
 
@@ -27,14 +27,14 @@ def uncompress_lz77(data):
     ## no critic (Cascading if-elsif chain)
     if (ord_ == 0):
       # Nulls are literal
-      text += char;
+      text += str(char);
     elif (ord_ <= 8):
       # Next $ord bytes are literal
-      text += data[offset:offset+ord_] # text .=substr($data,$offset,ord);
+      text += str(data[offset:offset+ord_]) # text .=substr($data,$offset,ord);
       offset += ord_;
     elif (ord_ <= 0x7f):
       # Values from 0x09 through 0x7f are literal
-      text += char;
+      text += str(char);
     elif (ord_ <= 0xbf):
       # Data is LZ77-compressed
 
@@ -48,7 +48,7 @@ def uncompress_lz77(data):
 
       offset += 1;
       if (offset > len(data)):
-        print("WARNING: offset to LZ77 bits is outside of the data: %d" % offset);
+        print(("WARNING: offset to LZ77 bits is outside of the data: %d" % offset));
         return text;
 
       lz77, = struct.unpack('>H', data[offset-2:offset])
@@ -73,8 +73,8 @@ def uncompress_lz77(data):
       for lz77pos in range(lz77length): # for($lz77pos = 0; $lz77pos < $lz77length; $lz77pos++)
         textpos = textlength - lz77offset;
         if (textpos < 0):
-          print("WARNING: LZ77 decompression reference is before"+
-                " beginning of text! %x" % lz77);
+          print(("WARNING: LZ77 decompression reference is before"+
+                " beginning of text! %x" % lz77));
           return;
 
         text += text[textpos:textpos+1]; #text .= substr($text,$textpos,1);

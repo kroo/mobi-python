@@ -1,10 +1,11 @@
 from mobi import Mobi
-
-book = Mobi("test/CharlesDarwin.mobi");
+import os
+path = os.path.dirname(__file__)
+book = Mobi(f"{path}/test/CharlesDarwin.mobi");
 book.parse();
 
 for record in book:
-  print record,
+  print(record)
 
 import pprint
 pprint.pprint(book.config)
