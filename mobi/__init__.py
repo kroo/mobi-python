@@ -22,6 +22,7 @@ class Mobi:
     self.header = self.parseHeader();
     self.records = self.parseRecordInfoList();
     self.readRecord0()
+    self.f.close()
 
   def readRecord(self, recordnum, disable_compression=False):
     if self.config:
